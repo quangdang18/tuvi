@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thanh toán (mô phỏng)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, "Segoe UI", sans-serif; }
+    body { background: #f0f2f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .card { background: #fff; border-radius: 18px; padding: 26px; max-width: 380px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,.15); text-align: center; }
+    .badge { display: inline-block; background: #ffeaf3; color: #d6336c; padding: 4px 12px; border-radius: 20px; font-size: .75rem; margin-bottom: 14px; }
+    h1 { font-size: 1.1rem; margin-bottom: 6px; }
+    .amount { font-size: 2rem; font-weight: 800; color: #6a11cb; margin: 12px 0; }
+    .meta { font-size: .82rem; color: #888; margin-bottom: 20px; word-break: break-all; }
+    button { width: 100%; padding: 13px; border: none; border-radius: 12px; background: linear-gradient(135deg,#6a11cb,#2575fc); color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    .ok { color: #2b8a3e; font-weight: 700; margin-top: 16px; }
+    a { color: #2575fc; font-size: .85rem; display: inline-block; margin-top: 14px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">MÔ PHỎNG THANH TOÁN</div>
+    <h1 id="provider">Cổng thanh toán</h1>
+    <div class="amount" id="amount">—</div>
+    <div class="meta">Mã đơn: <span id="orderId">—</span></div>
+    <button id="payBtn" onclick="pay()">Xác nhận thanh toán ✅</button>
+    <div class="ok" id="result"></div>
+  </div>
+
+  <script>
+    const q = new URLSearchParams(location.search);
+    const orderId = q.get("orderId") || "";
+    const amount = q.get("amount") || "0";
+    const provider = q.get("provider") || "";
+    document.getElementById("orderId").textContent = orderId;
+    document.getElementById("amount").textContent = Number(amount).toLocaleString("vi-VN") + " ₫";
+    document.getElementById("provider").textContent = "Thanh toán qua " + provider;
+
+    async function pay() {
+      const btn = document.getElementById("payBtn");
+      btn.disabled = true; btn.textContent = "Đang xử lý...";
+      const res = await fetch("/api/payment/simulate-success", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId })
+      }).then(r => r.json());
+      document.getElementById("result").innerHTML =
+        "🎉 Thanh toán thành công! Premium đến " +
+        new Date(res.premiumUntil).toLocaleDateString("vi-VN") +
+        '<br/><a href="app.html">← Quay lại app</a>';
+      btn.style.display = "none";
+    }
+  </script>
+</body>
+</html>

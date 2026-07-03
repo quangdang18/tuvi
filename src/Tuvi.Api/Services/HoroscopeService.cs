@@ -31,6 +31,39 @@ public class HoroscopeService
         });
     }
 
+    /// <summary>
+    /// Bọc tử vi gốc bằng lớp cá nhân hóa: lời chào theo tâm trạng, thông điệp streak,
+    /// và "lá số chuyên sâu" nếu user là premium (nếu không thì trả teaser để mời nâng cấp).
+    /// </summary>
+    public PersonalizedHoroscope Personalize(
+        DailyHoroscope reading, string displayName, Mood? mood, int streak, bool premium)
+    {
+        string d = reading.Date.ToString("yyyyMMdd");
+
+        string greeting = mood is null
+            ? "Chào bạn, cùng xem hôm nay có gì nhé!"
+            : StableHash.Pick(PersonalizationContent.Greetings[mood.Value], displayName, d, "greet");
+
+        string? deep = premium
+            ? StableHash.Pick(PersonalizationContent.DeepInsights, displayName, d, reading.SignKey)
+            : null;
+
+        string? teaser = premium
+            ? null
+            : "🔒 Mở khóa Premium để xem 'Lá số chuyên sâu' và phân tích cặp đôi chi tiết.";
+
+        return new PersonalizedHoroscope(
+            DisplayName: displayName,
+            Greeting: greeting,
+            Mood: mood,
+            Streak: streak,
+            StreakMessage: PersonalizationContent.StreakMessage(streak),
+            Reading: reading,
+            IsPremium: premium,
+            DeepInsight: deep,
+            PremiumTeaser: teaser);
+    }
+
     private static DailyHoroscope Build(ZodiacInfo sign, DateOnly date)
     {
         string d = date.ToString("yyyyMMdd");

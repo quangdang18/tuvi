@@ -25,3 +25,8 @@ Thumbs.db
 ## App
 appsettings.*.local.json
 *.log
+
+## SQLite database (tạo lại tự động khi chạy)
+*.db
+*.db-shm
+*.db-wal

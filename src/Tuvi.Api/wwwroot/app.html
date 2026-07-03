@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tử Vi — App đầy đủ</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, "Segoe UI", Roboto, sans-serif; background: linear-gradient(135deg,#6a11cb,#2575fc); min-height: 100vh; padding: 20px; color: #1a1a2e; }
+    .app { max-width: 480px; margin: 0 auto; }
+    h1 { color: #fff; text-align: center; margin-bottom: 16px; font-size: 1.5rem; }
+    .card { background: #fff; border-radius: 18px; padding: 20px; margin-bottom: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+    .card h2 { font-size: .95rem; color: #6a11cb; margin-bottom: 12px; }
+    label { font-size: .78rem; color: #777; display: block; margin: 8px 0 4px; }
+    input { width: 100%; padding: 10px; border: 2px solid #ececf5; border-radius: 10px; font-size: .95rem; }
+    button { border: none; border-radius: 10px; background: linear-gradient(135deg,#6a11cb,#2575fc); color: #fff; font-weight: 600; cursor: pointer; padding: 11px 14px; font-size: .92rem; }
+    button.ghost { background: #f2f0fb; color: #6a11cb; }
+    button:disabled { opacity: .5; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .moods button { flex: 1; min-width: 88px; }
+    .hidden { display: none; }
+    .greet { font-style: italic; color: #6a11cb; margin-bottom: 8px; }
+    .streak { background: #fff4e6; border-radius: 10px; padding: 10px; font-size: .88rem; color: #e8590c; margin-bottom: 12px; }
+    .sec { padding: 10px 0; border-top: 1px solid #f0f0f5; }
+    .sec b { color: #a06cd5; font-size: .78rem; text-transform: uppercase; }
+    .sec p { font-size: .9rem; line-height: 1.5; margin-top: 3px; }
+    .deep { background: linear-gradient(135deg,#fff7e6,#ffe8cc); border-radius: 10px; padding: 12px; margin-top: 10px; font-size: .9rem; }
+    .locked { background: #f1f3f5; border-radius: 10px; padding: 12px; margin-top: 10px; font-size: .88rem; color: #868e96; text-align: center; }
+    .muted { color: #999; font-size: .8rem; }
+    .badge { display:inline-block; background:#ffd43b; color:#664d03; font-size:.72rem; padding:2px 8px; border-radius:10px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>✨ Tử Vi Của Tôi</h1>
+
+    <!-- Bước 1: đăng ký -->
+    <div class="card" id="regCard">
+      <h2>1 · Tạo hồ sơ</h2>
+      <label>Tên hiển thị</label>
+      <input id="name" value="Minh" />
+      <label>Ngày sinh</label>
+      <input id="dob" type="date" value="2001-08-01" />
+      <label>Giờ sinh (không bắt buộc)</label>
+      <input id="time" type="time" />
+      <div style="margin-top:12px"><button onclick="register()">Tạo hồ sơ →</button></div>
+    </div>
+
+    <!-- Bước 2: check-in + kết quả -->
+    <div class="card hidden" id="moodCard">
+      <h2>2 · Hôm nay bạn thế nào?</h2>
+      <div class="row moods">
+        <button class="ghost" onclick="checkin('Happy')">😄 Vui</button>
+        <button class="ghost" onclick="checkin('Normal')">🙂 Bình thường</button>
+        <button class="ghost" onclick="checkin('Sad')">😔 Buồn</button>
+        <button class="ghost" onclick="checkin('Stressed')">😣 Căng thẳng</button>
+        <button class="ghost" onclick="checkin('Excited')">🤩 Hào hứng</button>
+        <button class="ghost" onclick="checkin('Tired')">😴 Mệt</button>
+      </div>
+    </div>
+
+    <div class="card hidden" id="result"></div>
+
+    <!-- Bước 3: premium -->
+    <div class="card hidden" id="premiumCard">
+      <h2>3 · Nâng cấp Premium</h2>
+      <p class="muted">Mở khóa "Lá số chuyên sâu" &amp; phân tích cặp đôi — chỉ 20.000₫/tháng.</p>
+      <div class="row" style="margin-top:10px">
+        <button onclick="buy('MoMo')">Mua qua MoMo</button>
+        <button onclick="buy('ZaloPay')">Mua qua ZaloPay</button>
+        <button class="ghost" onclick="refresh()">↻ Kiểm tra lại</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let userId = null;
+
+    async function register() {
+      const body = {
+        displayName: document.getElementById("name").value,
+        birthDate: document.getElementById("dob").value,
+        birthTime: document.getElementById("time").value || null,
+        birthPlace: null
+      };
+      const u = await fetch("/api/users", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+      }).then(r => r.json());
+      userId = u.id;
+      document.getElementById("regCard").classList.add("hidden");
+      document.getElementById("moodCard").classList.remove("hidden");
+      document.getElementById("premiumCard").classList.remove("hidden");
+    }
+
+    async function checkin(mood) {
+      const res = await fetch(`/api/users/${userId}/checkin`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mood, note: null })
+      }).then(r => r.json());
+      render(res.horoscope);
+    }
+
+    async function refresh() {
+      const h = await fetch(`/api/users/${userId}/horoscope`).then(r => r.json());
+      render(h);
+    }
+
+    function render(h) {
+      const r = h.reading;
+      const box = document.getElementById("result");
+      box.classList.remove("hidden");
+      const stars = "★".repeat(r.score) + "☆".repeat(5 - r.score);
+      const premiumBlock = h.isPremium
+        ? `<div class="deep"><span class="badge">PREMIUM</span><p style="margin-top:6px">${h.deepInsight}</p></div>`
+        : `<div class="locked">${h.premiumTeaser}</div>`;
+      box.innerHTML = `
+        <div class="greet">${h.greeting}</div>
+        <div class="streak">${h.streakMessage}</div>
+        <div style="font-size:1.1rem;font-weight:700">${r.symbol} ${r.signNameVi} · <span style="color:#ffb300">${stars}</span></div>
+        <div style="font-style:italic;color:#6a11cb;margin:6px 0 4px">${r.headline}</div>
+        <div class="sec"><b>Tổng quan</b><p>${r.overall}</p></div>
+        <div class="sec"><b>💗 Tình cảm</b><p>${r.love}</p></div>
+        <div class="sec"><b>📚 Học tập / Sự nghiệp</b><p>${r.career}</p></div>
+        <div class="sec"><b>💰 Tài chính</b><p>${r.money}</p></div>
+        <div class="sec"><b>✅ Lời khuyên</b><p>${r.advice}</p></div>
+        <p class="muted" style="margin-top:8px">Số may mắn <b>${r.luckyNumber}</b> · Màu <b>${r.luckyColor}</b></p>
+        ${premiumBlock}
+      `;
+    }
+
+    async function buy(provider) {
+      const order = await fetch("/api/payment/create", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, provider, plan: "Monthly" })
+      }).then(r => r.json());
+      // Mở trang thanh toán (mock). Sau khi thanh toán xong, bấm "Kiểm tra lại".
+      window.open(order.payUrl, "_blank");
+    }
+  </script>
+</body>
+</html>
