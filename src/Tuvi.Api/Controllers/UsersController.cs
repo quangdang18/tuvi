@@ -86,4 +86,22 @@ public class UsersController : ApiControllerBase
         var res = await _users.GetStreakAsync(id);
         return res is null ? NotFound() : res;
     }
+
+    /// <summary>Mã &amp; link mời bạn của user + số người đã mời được.</summary>
+    [HttpGet("{id:int}/referral")]
+    public async Task<ActionResult<ReferralInfo>> Referral(int id)
+    {
+        if (id != CurrentUserId) return Forbid();
+        string baseUrl = $"{Request.Scheme}://{Request.Host}";
+        var res = await _users.GetReferralAsync(id, baseUrl);
+        return res is null ? NotFound() : res;
+    }
+
+    /// <summary>Cập nhật mối quan tâm chính (onboarding) để cá nhân hóa điểm nhấn.</summary>
+    [HttpPut("{id:int}/focus")]
+    public async Task<IActionResult> Focus(int id, [FromBody] FocusRequest req)
+    {
+        if (id != CurrentUserId) return Forbid();
+        return await _users.SetFocusAsync(id, req.Focus) ? NoContent() : NotFound();
+    }
 }

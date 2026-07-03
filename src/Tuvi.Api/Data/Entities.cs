@@ -13,6 +13,15 @@ public class User
     public string? BirthPlace { get; set; }
     public string ZodiacKey { get; set; } = "";
 
+    /// <summary>Mối quan tâm chính (chọn khi onboarding) để cá nhân hóa điểm nhấn.</summary>
+    public FocusArea? FocusArea { get; set; }
+
+    /// <summary>Mã giới thiệu riêng của user (để mời bạn bè).</summary>
+    public string ReferralCode { get; set; } = "";
+
+    /// <summary>User đã giới thiệu người này (nếu có) — nền tảng cho vòng lặp lan truyền.</summary>
+    public int? ReferredByUserId { get; set; }
+
     /// <summary>Hết hạn premium; null hoặc quá khứ = chưa/không còn premium.</summary>
     public DateTimeOffset? PremiumUntil { get; set; }
 

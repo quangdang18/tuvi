@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chia sẻ · Tử Vi</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, "Segoe UI", sans-serif; }
+    body { background: linear-gradient(135deg,#6a11cb,#2575fc); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .card { background: #fff; border-radius: 22px; padding: 28px; max-width: 400px; width: 100%; box-shadow: 0 16px 50px rgba(0,0,0,.3); text-align: center; }
+    .emoji { font-size: 3rem; }
+    h1 { font-size: 1.25rem; margin: 8px 0; color: #1a1a2e; }
+    .big { font-size: 2.6rem; font-weight: 800; color: #6a11cb; margin: 8px 0; }
+    .verdict { font-size: 1.05rem; font-weight: 700; color: #d6336c; margin-bottom: 10px; }
+    .detail { font-size: .92rem; line-height: 1.55; color: #444; }
+    .stars { color: #ffb300; font-size: 1.4rem; letter-spacing: 3px; margin: 6px 0; }
+    .cta { display: block; margin-top: 22px; padding: 14px; border-radius: 12px; background: linear-gradient(135deg,#6a11cb,#2575fc); color: #fff; text-decoration: none; font-weight: 700; }
+    .muted { color: #999; font-size: .72rem; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="card" id="card"><div class="emoji">✨</div><h1>Đang tải…</h1></div>
+  <script>
+    const q = new URLSearchParams(location.search);
+    const card = document.getElementById("card");
+
+    async function main() {
+      if (q.get("a") && q.get("b")) return renderCompat(q.get("a"), q.get("b"));
+      if (q.get("sign")) return renderDaily(q.get("sign"));
+      card.innerHTML = '<div class="emoji">🔮</div><h1>Tử Vi Mỗi Ngày</h1><a class="cta" href="app.html">Mở app</a>';
+    }
+
+    async function renderCompat(a, b) {
+      const r = await fetch(`/api/compatibility?a=${a}&b=${b}`).then(x => x.json());
+      card.innerHTML = `
+        <div class="emoji">💞</div>
+        <h1>${r.signA} 💘 ${r.signB}</h1>
+        <div class="big">${r.percent}%</div>
+        <div class="verdict">${r.verdict}</div>
+        <div class="detail">${r.detail}</div>
+        <a class="cta" href="app.html">Xem độ hợp của bạn →</a>
+        <div class="muted">Mang tính giải trí & tham khảo</div>`;
+    }
+
+    async function renderDaily(sign) {
+      const r = await fetch(`/api/horoscope/daily/${sign}`).then(x => x.json());
+      const stars = "★".repeat(r.score) + "☆".repeat(5 - r.score);
+      card.innerHTML = `
+        <div class="emoji">${r.symbol}</div>
+        <h1>${r.signNameVi} hôm nay</h1>
+        <div class="stars">${stars}</div>
+        <div class="verdict">${r.headline}</div>
+        <div class="detail">${r.overall}</div>
+        <a class="cta" href="app.html">Xem tử vi của bạn →</a>
+        <div class="muted">Mang tính giải trí & tham khảo</div>`;
+    }
+
+    main();
+  </script>
+</body>
+</html>

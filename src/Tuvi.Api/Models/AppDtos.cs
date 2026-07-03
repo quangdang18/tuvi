@@ -6,7 +6,9 @@ public record RegisterUserRequest(
     string DisplayName,
     DateOnly BirthDate,
     TimeOnly? BirthTime,
-    string? BirthPlace);
+    string? BirthPlace,
+    FocusArea? Focus = null,
+    string? ReferralCode = null);
 
 public record UserResult(
     int Id,
@@ -17,10 +19,17 @@ public record UserResult(
     ZodiacInfo Zodiac,
     NumerologyResult Numerology,
     bool IsPremium,
-    DateTimeOffset? PremiumUntil);
+    DateTimeOffset? PremiumUntil,
+    string ReferralCode,
+    FocusArea? Focus);
 
 /// <summary>Kết quả đăng ký: token JWT + hồ sơ user.</summary>
 public record AuthResponse(string Token, UserResult User);
+
+/// <summary>Thông tin mời bạn: mã, link mời, số người đã mời được.</summary>
+public record ReferralInfo(string Code, string Link, int InvitedCount);
+
+public record FocusRequest(FocusArea Focus);
 
 public record DeviceTokenRequest(string Token);
 
@@ -47,7 +56,8 @@ public record PersonalizedHoroscope(
     DailyHoroscope Reading,
     bool IsPremium,
     string? DeepInsight,
-    string? PremiumTeaser);
+    string? PremiumTeaser,
+    string? FocusHighlight);
 
 // ----- Thanh toán -----
 

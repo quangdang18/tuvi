@@ -26,5 +26,9 @@ public class AppDbContext : DbContext
         b.Entity<PaymentOrder>()
             .HasIndex(p => p.OrderId)
             .IsUnique();
+
+        b.Entity<User>()
+            .HasIndex(u => u.ReferralCode)
+            .IsUnique();
     }
 }

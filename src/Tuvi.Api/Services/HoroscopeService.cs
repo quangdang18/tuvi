@@ -36,7 +36,7 @@ public class HoroscopeService
     /// và "lá số chuyên sâu" nếu user là premium (nếu không thì trả teaser để mời nâng cấp).
     /// </summary>
     public PersonalizedHoroscope Personalize(
-        DailyHoroscope reading, string displayName, Mood? mood, int streak, bool premium)
+        DailyHoroscope reading, string displayName, Mood? mood, int streak, bool premium, FocusArea? focus)
     {
         string d = reading.Date.ToString("yyyyMMdd");
 
@@ -52,6 +52,16 @@ public class HoroscopeService
             ? null
             : "🔒 Mở khóa Premium để xem 'Lá số chuyên sâu' và phân tích cặp đôi chi tiết.";
 
+        // Làm nổi bật đúng phần user quan tâm nhất (chọn lúc onboarding).
+        string? focusHighlight = focus switch
+        {
+            FocusArea.Love => "💗 Bạn đang quan tâm chuyện tình cảm — điểm nhấn hôm nay: " + reading.Love,
+            FocusArea.Career => "📚 Bạn đang tập trung sự nghiệp/học tập — điểm nhấn hôm nay: " + reading.Career,
+            FocusArea.Money => "💰 Bạn đang để ý tài chính — điểm nhấn hôm nay: " + reading.Money,
+            FocusArea.Growth => "🌱 Bạn đang muốn phát triển bản thân — điểm nhấn hôm nay: " + reading.Mood,
+            _ => null
+        };
+
         return new PersonalizedHoroscope(
             DisplayName: displayName,
             Greeting: greeting,
@@ -61,7 +71,8 @@ public class HoroscopeService
             Reading: reading,
             IsPremium: premium,
             DeepInsight: deep,
-            PremiumTeaser: teaser);
+            PremiumTeaser: teaser,
+            FocusHighlight: focusHighlight);
     }
 
     private static DailyHoroscope Build(ZodiacInfo sign, DateOnly date)

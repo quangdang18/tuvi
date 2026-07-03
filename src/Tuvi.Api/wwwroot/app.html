@@ -12,7 +12,7 @@
     .card { background: #fff; border-radius: 18px; padding: 20px; margin-bottom: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.2); }
     .card h2 { font-size: .95rem; color: #6a11cb; margin-bottom: 12px; }
     label { font-size: .78rem; color: #777; display: block; margin: 8px 0 4px; }
-    input { width: 100%; padding: 10px; border: 2px solid #ececf5; border-radius: 10px; font-size: .95rem; }
+    input, select { width: 100%; padding: 10px; border: 2px solid #ececf5; border-radius: 10px; font-size: .95rem; background: #fff; }
     button { border: none; border-radius: 10px; background: linear-gradient(135deg,#6a11cb,#2575fc); color: #fff; font-weight: 600; cursor: pointer; padding: 11px 14px; font-size: .92rem; }
     button.ghost { background: #f2f0fb; color: #6a11cb; }
     button:disabled { opacity: .5; }
@@ -21,6 +21,7 @@
     .hidden { display: none; }
     .greet { font-style: italic; color: #6a11cb; margin-bottom: 8px; }
     .streak { background: #fff4e6; border-radius: 10px; padding: 10px; font-size: .88rem; color: #e8590c; margin-bottom: 12px; }
+    .focus { background: #e7f5ff; border-radius: 10px; padding: 10px; font-size: .9rem; color: #1971c2; margin-bottom: 12px; }
     .sec { padding: 10px 0; border-top: 1px solid #f0f0f5; }
     .sec b { color: #a06cd5; font-size: .78rem; text-transform: uppercase; }
     .sec p { font-size: .9rem; line-height: 1.5; margin-top: 3px; }
@@ -28,6 +29,10 @@
     .locked { background: #f1f3f5; border-radius: 10px; padding: 12px; margin-top: 10px; font-size: .88rem; color: #868e96; text-align: center; }
     .muted { color: #999; font-size: .8rem; }
     .badge { display:inline-block; background:#ffd43b; color:#664d03; font-size:.72rem; padding:2px 8px; border-radius:10px; }
+    .refbox { display: flex; gap: 8px; margin-top: 8px; }
+    .refbox input { font-weight: 700; letter-spacing: 2px; text-align: center; color: #6a11cb; }
+    .invited { font-size: .82rem; color: #2b8a3e; margin-top: 8px; }
+    .refnote { background:#fff9db; border-radius:8px; padding:8px; font-size:.8rem; color:#856404; margin-bottom:10px; }
   </style>
 </head>
 <body>
@@ -37,12 +42,21 @@
     <!-- Bước 1: đăng ký -->
     <div class="card" id="regCard">
       <h2>1 · Tạo hồ sơ</h2>
+      <div class="refnote hidden" id="refNote"></div>
       <label>Tên hiển thị</label>
       <input id="name" value="Minh" />
       <label>Ngày sinh</label>
       <input id="dob" type="date" value="2001-08-01" />
       <label>Giờ sinh (không bắt buộc)</label>
       <input id="time" type="time" />
+      <label>Bạn quan tâm điều gì nhất?</label>
+      <select id="focus">
+        <option value="">— Chọn (không bắt buộc) —</option>
+        <option value="Love">💗 Tình cảm</option>
+        <option value="Career">📚 Sự nghiệp / học tập</option>
+        <option value="Money">💰 Tài chính</option>
+        <option value="Growth">🌱 Phát triển bản thân</option>
+      </select>
       <div style="margin-top:12px"><button onclick="register()">Tạo hồ sơ →</button></div>
     </div>
 
@@ -61,9 +75,23 @@
 
     <div class="card hidden" id="result"></div>
 
-    <!-- Bước 3: premium -->
+    <!-- Bước 3: mời bạn (viral) -->
+    <div class="card hidden" id="referCard">
+      <h2>3 · Mời bạn — cả hai +3 ngày Premium 🎁</h2>
+      <p class="muted">Gửi mã/link cho bạn bè. Khi họ đăng ký bằng mã của bạn, <b>cả hai</b> được cộng 3 ngày Premium.</p>
+      <div class="refbox">
+        <input id="refCode" readonly />
+        <button onclick="copyRef()">Copy link</button>
+      </div>
+      <div class="invited" id="invited"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="ghost" onclick="shareDaily()">Chia sẻ tử vi hôm nay</button>
+      </div>
+    </div>
+
+    <!-- Bước 4: premium -->
     <div class="card hidden" id="premiumCard">
-      <h2>3 · Nâng cấp Premium</h2>
+      <h2>4 · Nâng cấp Premium</h2>
       <p class="muted">Mở khóa "Lá số chuyên sâu" &amp; phân tích cặp đôi — chỉ 20.000₫/tháng.</p>
       <div class="row" style="margin-top:10px">
         <button onclick="buy('MoMo')">Mua qua MoMo</button>
@@ -74,24 +102,52 @@
   </div>
 
   <script>
-    let userId = null, token = null;
+    let userId = null, token = null, userSign = null, refLink = "";
     const authHeaders = () => ({ "Content-Type": "application/json", "Authorization": "Bearer " + token });
+    const refParam = new URLSearchParams(location.search).get("ref");
+
+    if (refParam) {
+      const n = document.getElementById("refNote");
+      n.classList.remove("hidden");
+      n.innerHTML = `🎁 Bạn được mời bằng mã <b>${refParam}</b> — đăng ký xong sẽ được +3 ngày Premium!`;
+    }
 
     async function register() {
+      const focus = document.getElementById("focus").value || null;
       const body = {
         displayName: document.getElementById("name").value,
         birthDate: document.getElementById("dob").value,
         birthTime: document.getElementById("time").value || null,
-        birthPlace: null
+        birthPlace: null,
+        focus,
+        referralCode: refParam
       };
       const auth = await fetch("/api/users", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
       }).then(r => r.json());
       token = auth.token;
       userId = auth.user.id;
+      userSign = auth.user.zodiac.key;
       document.getElementById("regCard").classList.add("hidden");
       document.getElementById("moodCard").classList.remove("hidden");
+      document.getElementById("referCard").classList.remove("hidden");
       document.getElementById("premiumCard").classList.remove("hidden");
+      loadReferral();
+    }
+
+    async function loadReferral() {
+      const r = await fetch(`/api/users/${userId}/referral`, { headers: authHeaders() }).then(x => x.json());
+      refLink = r.link;
+      document.getElementById("refCode").value = r.link;
+      document.getElementById("invited").textContent = `Đã mời được: ${r.invitedCount} người`;
+    }
+
+    function copyRef() {
+      navigator.clipboard.writeText(refLink).then(() => alert("Đã copy link mời!"));
+    }
+
+    function shareDaily() {
+      window.open(`share.html?sign=${userSign}`, "_blank");
     }
 
     async function checkin(mood) {
@@ -112,12 +168,14 @@
       const box = document.getElementById("result");
       box.classList.remove("hidden");
       const stars = "★".repeat(r.score) + "☆".repeat(5 - r.score);
+      const focusBlock = h.focusHighlight ? `<div class="focus">${h.focusHighlight}</div>` : "";
       const premiumBlock = h.isPremium
         ? `<div class="deep"><span class="badge">PREMIUM</span><p style="margin-top:6px">${h.deepInsight}</p></div>`
         : `<div class="locked">${h.premiumTeaser}</div>`;
       box.innerHTML = `
         <div class="greet">${h.greeting}</div>
         <div class="streak">${h.streakMessage}</div>
+        ${focusBlock}
         <div style="font-size:1.1rem;font-weight:700">${r.symbol} ${r.signNameVi} · <span style="color:#ffb300">${stars}</span></div>
         <div style="font-style:italic;color:#6a11cb;margin:6px 0 4px">${r.headline}</div>
         <div class="sec"><b>Tổng quan</b><p>${r.overall}</p></div>
@@ -135,7 +193,6 @@
         method: "POST", headers: authHeaders(),
         body: JSON.stringify({ provider, plan: "Monthly" })
       }).then(r => r.json());
-      // Mở trang thanh toán (mock). Sau khi thanh toán xong, bấm "Kiểm tra lại".
       window.open(order.payUrl, "_blank");
     }
   </script>

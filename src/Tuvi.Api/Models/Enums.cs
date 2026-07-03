@@ -11,6 +11,15 @@ public enum Mood
     Tired      // Mệt mỏi
 }
 
+/// <summary>Mối quan tâm chính người dùng chọn khi onboarding — dùng để làm nổi bật đúng phần họ quan tâm.</summary>
+public enum FocusArea
+{
+    Love,    // Tình cảm
+    Career,  // Sự nghiệp / học tập
+    Money,   // Tài chính
+    Growth   // Phát triển bản thân
+}
+
 public enum PaymentProviderKind { MoMo, ZaloPay }
 
 public enum PaymentStatus { Pending, Paid, Failed, Canceled }

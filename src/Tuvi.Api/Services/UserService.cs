@@ -23,6 +23,8 @@ public class UserService
         _clock = clock;
     }
 
+    private const int ReferralBonusDays = 3;
+
     public async Task<UserResult> RegisterAsync(RegisterUserRequest req)
     {
         var zodiac = _zodiac.GetByDate(req.BirthDate);
@@ -33,11 +35,71 @@ public class UserService
             BirthTime = req.BirthTime,
             BirthPlace = req.BirthPlace,
             ZodiacKey = zodiac.Key,
-            CreatedAt = DateTimeOffset.UtcNow,
+            FocusArea = req.Focus,
+            ReferralCode = await GenerateReferralCodeAsync(),
+            CreatedAt = _clock.Now,
         };
+
+        // Đăng ký qua mã giới thiệu hợp lệ → thưởng premium cho cả người mời lẫn người được mời.
+        User? referrer = null;
+        if (!string.IsNullOrWhiteSpace(req.ReferralCode))
+        {
+            referrer = await _db.Users.FirstOrDefaultAsync(u => u.ReferralCode == req.ReferralCode);
+            if (referrer is not null)
+            {
+                user.ReferredByUserId = referrer.Id;
+                ExtendPremium(user, ReferralBonusDays);
+            }
+        }
+
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
+
+        if (referrer is not null)
+        {
+            ExtendPremium(referrer, ReferralBonusDays);
+            await _db.SaveChangesAsync();
+        }
+
         return ToResult(user, zodiac);
+    }
+
+    private async Task<string> GenerateReferralCodeAsync()
+    {
+        const string alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // bỏ ký tự dễ nhầm (0/O, 1/I)
+        for (int attempt = 0; attempt < 10; attempt++)
+        {
+            var chars = new char[6];
+            for (int i = 0; i < chars.Length; i++)
+                chars[i] = alphabet[Random.Shared.Next(alphabet.Length)];
+            string code = new(chars);
+            if (!await _db.Users.AnyAsync(u => u.ReferralCode == code))
+                return code;
+        }
+        return "TV" + _clock.Now.Ticks.ToString("X")[^6..];
+    }
+
+    private void ExtendPremium(User u, int days)
+    {
+        var from = u.PremiumUntil is { } p && p > _clock.Now ? p : _clock.Now;
+        u.PremiumUntil = from.AddDays(days);
+    }
+
+    public async Task<ReferralInfo?> GetReferralAsync(int id, string baseUrl)
+    {
+        var user = await _db.Users.FindAsync(id);
+        if (user is null) return null;
+        int invited = await _db.Users.CountAsync(u => u.ReferredByUserId == id);
+        return new ReferralInfo(user.ReferralCode, $"{baseUrl}/app.html?ref={user.ReferralCode}", invited);
+    }
+
+    public async Task<bool> SetFocusAsync(int id, FocusArea focus)
+    {
+        var user = await _db.Users.FindAsync(id);
+        if (user is null) return false;
+        user.FocusArea = focus;
+        await _db.SaveChangesAsync();
+        return true;
     }
 
     public async Task<UserResult?> GetAsync(int id)
@@ -57,7 +119,7 @@ public class UserService
 
     private UserResult ToResult(User u, ZodiacInfo z) =>
         new(u.Id, u.DisplayName, u.BirthDate, u.BirthTime, u.BirthPlace, z,
-            _numerology.LifePath(u.BirthDate), u.IsPremium, u.PremiumUntil);
+            _numerology.LifePath(u.BirthDate), u.IsPremium, u.PremiumUntil, u.ReferralCode, u.FocusArea);
 
     // ----- Check-in + streak + cá nhân hóa -----
 
@@ -100,7 +162,7 @@ public class UserService
     private PersonalizedHoroscope BuildPersonalized(User user, DateOnly date, Mood? mood, int streak)
     {
         var reading = _horoscope.GetDaily(user.ZodiacKey, date)!;
-        return _horoscope.Personalize(reading, user.DisplayName, mood, streak, user.IsPremium);
+        return _horoscope.Personalize(reading, user.DisplayName, mood, streak, user.IsPremium, user.FocusArea);
     }
 
     private async Task<StreakResult> ComputeStreakAsync(int userId, DateOnly today)
