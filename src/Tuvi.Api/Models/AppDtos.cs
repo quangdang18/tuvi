@@ -19,6 +19,9 @@ public record UserResult(
     bool IsPremium,
     DateTimeOffset? PremiumUntil);
 
+/// <summary>Kết quả đăng ký: token JWT + hồ sơ user.</summary>
+public record AuthResponse(string Token, UserResult User);
+
 public record DeviceTokenRequest(string Token);
 
 // ----- Check-in mood + streak -----
@@ -48,7 +51,7 @@ public record PersonalizedHoroscope(
 
 // ----- Thanh toán -----
 
-public record PaymentCreateRequest(int UserId, PaymentProviderKind Provider, PremiumPlan Plan);
+public record PaymentCreateRequest(PaymentProviderKind Provider, PremiumPlan Plan);
 
 public record PaymentCreateResult(
     string OrderId,

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Tuvi.Api.Data;
 using Tuvi.Api.Services;
+using Tuvi.Api.Time;
 
 namespace Tuvi.Api.Push;
 
@@ -13,12 +14,14 @@ public class DailyHoroscopePushJob : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly PushOptions _opt;
+    private readonly IClock _clock;
     private readonly ILogger<DailyHoroscopePushJob> _log;
 
-    public DailyHoroscopePushJob(IServiceScopeFactory scopeFactory, IOptions<PushOptions> opt, ILogger<DailyHoroscopePushJob> log)
+    public DailyHoroscopePushJob(IServiceScopeFactory scopeFactory, IOptions<PushOptions> opt, IClock clock, ILogger<DailyHoroscopePushJob> log)
     {
         _scopeFactory = scopeFactory;
         _opt = opt.Value;
+        _clock = clock;
         _log = log;
     }
 
@@ -38,10 +41,10 @@ public class DailyHoroscopePushJob : BackgroundService
 
     private TimeSpan TimeUntilNextRun()
     {
-        var now = DateTime.Now;
-        var next = now.Date.AddHours(_opt.SendAtHour);
-        if (next <= now) next = next.AddDays(1);
-        return next - now;
+        var nowLocal = _clock.Now.DateTime; // giờ tường VN
+        var next = nowLocal.Date.AddHours(_opt.SendAtHour);
+        if (next <= nowLocal) next = next.AddDays(1);
+        return next - nowLocal;
     }
 
     /// <summary>Gửi push cho tất cả user có device token. Public để endpoint dev gọi thử ngay.</summary>
@@ -52,7 +55,7 @@ public class DailyHoroscopePushJob : BackgroundService
         var horoscope = scope.ServiceProvider.GetRequiredService<HoroscopeService>();
         var sender = scope.ServiceProvider.GetRequiredService<IPushSender>();
 
-        var today = DateOnly.FromDateTime(DateTime.Now);
+        var today = _clock.Today;
         var users = await db.Users.Where(u => u.DeviceToken != null).ToListAsync(ct);
 
         int sent = 0;

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Tuvi.Api.Data;
 using Tuvi.Api.Models;
+using Tuvi.Api.Time;
 
 namespace Tuvi.Api.Services;
 
@@ -11,13 +12,15 @@ public class UserService
     private readonly ZodiacService _zodiac;
     private readonly NumerologyService _numerology;
     private readonly HoroscopeService _horoscope;
+    private readonly IClock _clock;
 
-    public UserService(AppDbContext db, ZodiacService zodiac, NumerologyService numerology, HoroscopeService horoscope)
+    public UserService(AppDbContext db, ZodiacService zodiac, NumerologyService numerology, HoroscopeService horoscope, IClock clock)
     {
         _db = db;
         _zodiac = zodiac;
         _numerology = numerology;
         _horoscope = horoscope;
+        _clock = clock;
     }
 
     public async Task<UserResult> RegisterAsync(RegisterUserRequest req)
@@ -58,8 +61,9 @@ public class UserService
 
     // ----- Check-in + streak + cá nhân hóa -----
 
-    public async Task<(PersonalizedHoroscope Horoscope, StreakResult Streak)?> CheckinAsync(int id, CheckinRequest req, DateOnly today)
+    public async Task<(PersonalizedHoroscope Horoscope, StreakResult Streak)?> CheckinAsync(int id, CheckinRequest req)
     {
+        var today = _clock.Today;
         var user = await _db.Users.FindAsync(id);
         if (user is null) return null;
 
@@ -76,20 +80,21 @@ public class UserService
         return (horo, streak);
     }
 
-    public async Task<PersonalizedHoroscope?> GetPersonalizedAsync(int id, DateOnly date)
+    public async Task<PersonalizedHoroscope?> GetPersonalizedAsync(int id, DateOnly? date)
     {
+        var d = date ?? _clock.Today;
         var user = await _db.Users.FindAsync(id);
         if (user is null) return null;
 
-        var checkin = await _db.Checkins.FirstOrDefaultAsync(c => c.UserId == id && c.Date == date);
-        var streak = await ComputeStreakAsync(id, date);
-        return BuildPersonalized(user, date, checkin?.Mood, streak.Current);
+        var checkin = await _db.Checkins.FirstOrDefaultAsync(c => c.UserId == id && c.Date == d);
+        var streak = await ComputeStreakAsync(id, d);
+        return BuildPersonalized(user, d, checkin?.Mood, streak.Current);
     }
 
-    public async Task<StreakResult?> GetStreakAsync(int id, DateOnly today)
+    public async Task<StreakResult?> GetStreakAsync(int id)
     {
         var exists = await _db.Users.AnyAsync(u => u.Id == id);
-        return exists ? await ComputeStreakAsync(id, today) : null;
+        return exists ? await ComputeStreakAsync(id, _clock.Today) : null;
     }
 
     private PersonalizedHoroscope BuildPersonalized(User user, DateOnly date, Mood? mood, int streak)

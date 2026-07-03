@@ -1,26 +1,52 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Tuvi.Api.Auth;
 using Tuvi.Api.Models;
 using Tuvi.Api.Services;
+using Tuvi.Api.Time;
 
 namespace Tuvi.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class UsersController : ControllerBase
+[Authorize]
+public class UsersController : ApiControllerBase
 {
     private readonly UserService _users;
+    private readonly TokenService _tokens;
+    private readonly IClock _clock;
 
-    public UsersController(UserService users) => _users = users;
+    public UsersController(UserService users, TokenService tokens, IClock clock)
+    {
+        _users = users;
+        _tokens = tokens;
+        _clock = clock;
+    }
 
-    /// <summary>Đăng ký user mới (lưu ngày/giờ/nơi sinh). Trả về hồ sơ + cung + thần số học.</summary>
+    /// <summary>Đăng ký user mới (lưu ngày/giờ/nơi sinh). Trả token JWT + hồ sơ.</summary>
+    [AllowAnonymous]
+    [EnableRateLimiting("register")]
     [HttpPost]
-    public async Task<ActionResult<UserResult>> Register([FromBody] RegisterUserRequest req)
-        => await _users.RegisterAsync(req);
+    public async Task<ActionResult<AuthResponse>> Register([FromBody] RegisterUserRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.DisplayName) || req.DisplayName.Trim().Length > 50)
+            return BadRequest("Tên hiển thị bắt buộc và tối đa 50 ký tự.");
+        if (req.BirthDate > _clock.Today || req.BirthDate < new DateOnly(1900, 1, 1))
+            return BadRequest("Ngày sinh không hợp lệ.");
+        if (req.BirthPlace is { Length: > 100 })
+            return BadRequest("Nơi sinh tối đa 100 ký tự.");
 
-    /// <summary>Lấy hồ sơ user.</summary>
+        var user = await _users.RegisterAsync(req);
+        string token = _tokens.Create(user.Id, user.DisplayName);
+        return new AuthResponse(token, user);
+    }
+
+    /// <summary>Hồ sơ user hiện tại.</summary>
     [HttpGet("{id:int}")]
     public async Task<ActionResult<UserResult>> Get(int id)
     {
+        if (id != CurrentUserId) return Forbid();
         var u = await _users.GetAsync(id);
         return u is null ? NotFound() : u;
     }
@@ -29,6 +55,7 @@ public class UsersController : ControllerBase
     [HttpPost("{id:int}/device-token")]
     public async Task<IActionResult> DeviceToken(int id, [FromBody] DeviceTokenRequest req)
     {
+        if (id != CurrentUserId) return Forbid();
         if (string.IsNullOrWhiteSpace(req.Token)) return BadRequest("Token trống.");
         return await _users.SetDeviceTokenAsync(id, req.Token) ? NoContent() : NotFound();
     }
@@ -37,7 +64,8 @@ public class UsersController : ControllerBase
     [HttpPost("{id:int}/checkin")]
     public async Task<ActionResult<CheckinResponse>> Checkin(int id, [FromBody] CheckinRequest req)
     {
-        var res = await _users.CheckinAsync(id, req, Today());
+        if (id != CurrentUserId) return Forbid();
+        var res = await _users.CheckinAsync(id, req);
         return res is null ? NotFound() : new CheckinResponse(res.Value.Horoscope, res.Value.Streak);
     }
 
@@ -45,7 +73,8 @@ public class UsersController : ControllerBase
     [HttpGet("{id:int}/horoscope")]
     public async Task<ActionResult<PersonalizedHoroscope>> Horoscope(int id, [FromQuery] DateOnly? date)
     {
-        var res = await _users.GetPersonalizedAsync(id, date ?? Today());
+        if (id != CurrentUserId) return Forbid();
+        var res = await _users.GetPersonalizedAsync(id, date);
         return res is null ? NotFound() : res;
     }
 
@@ -53,9 +82,8 @@ public class UsersController : ControllerBase
     [HttpGet("{id:int}/streak")]
     public async Task<ActionResult<StreakResult>> Streak(int id)
     {
-        var res = await _users.GetStreakAsync(id, Today());
+        if (id != CurrentUserId) return Forbid();
+        var res = await _users.GetStreakAsync(id);
         return res is null ? NotFound() : res;
     }
-
-    private static DateOnly Today() => DateOnly.FromDateTime(DateTime.Now);
 }

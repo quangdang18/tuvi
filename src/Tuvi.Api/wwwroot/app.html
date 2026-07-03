@@ -74,7 +74,8 @@
   </div>
 
   <script>
-    let userId = null;
+    let userId = null, token = null;
+    const authHeaders = () => ({ "Content-Type": "application/json", "Authorization": "Bearer " + token });
 
     async function register() {
       const body = {
@@ -83,10 +84,11 @@
         birthTime: document.getElementById("time").value || null,
         birthPlace: null
       };
-      const u = await fetch("/api/users", {
+      const auth = await fetch("/api/users", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
       }).then(r => r.json());
-      userId = u.id;
+      token = auth.token;
+      userId = auth.user.id;
       document.getElementById("regCard").classList.add("hidden");
       document.getElementById("moodCard").classList.remove("hidden");
       document.getElementById("premiumCard").classList.remove("hidden");
@@ -94,14 +96,14 @@
 
     async function checkin(mood) {
       const res = await fetch(`/api/users/${userId}/checkin`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: authHeaders(),
         body: JSON.stringify({ mood, note: null })
       }).then(r => r.json());
       render(res.horoscope);
     }
 
     async function refresh() {
-      const h = await fetch(`/api/users/${userId}/horoscope`).then(r => r.json());
+      const h = await fetch(`/api/users/${userId}/horoscope`, { headers: authHeaders() }).then(r => r.json());
       render(h);
     }
 
@@ -130,8 +132,8 @@
 
     async function buy(provider) {
       const order = await fetch("/api/payment/create", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, provider, plan: "Monthly" })
+        method: "POST", headers: authHeaders(),
+        body: JSON.stringify({ provider, plan: "Monthly" })
       }).then(r => r.json());
       // Mở trang thanh toán (mock). Sau khi thanh toán xong, bấm "Kiểm tra lại".
       window.open(order.payUrl, "_blank");

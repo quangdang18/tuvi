@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Tuvi.Api.Models;
 using Tuvi.Api.Payments;
@@ -7,18 +8,19 @@ namespace Tuvi.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class PaymentController : ControllerBase
+public class PaymentController : ApiControllerBase
 {
     private readonly PaymentService _payment;
 
     public PaymentController(PaymentService payment) => _payment = payment;
 
-    /// <summary>Tạo đơn nâng cấp Premium → trả link thanh toán (Mock: trang mô phỏng local).</summary>
+    /// <summary>Tạo đơn nâng cấp Premium cho user hiện tại → trả link thanh toán (Mock: trang mô phỏng local).</summary>
+    [Authorize]
     [HttpPost("create")]
     public async Task<ActionResult<PaymentCreateResult>> Create([FromBody] PaymentCreateRequest req)
     {
         string baseUrl = $"{Request.Scheme}://{Request.Host}";
-        var res = await _payment.CreateAsync(req, baseUrl);
+        var res = await _payment.CreateAsync(CurrentUserId, req, baseUrl);
         return res is null ? NotFound("User hoặc cổng thanh toán không hợp lệ.") : res;
     }
 

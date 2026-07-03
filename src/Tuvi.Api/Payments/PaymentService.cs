@@ -26,9 +26,9 @@ public class PaymentService
     public IPaymentProvider? GetProvider(PaymentProviderKind kind) =>
         _providers.TryGetValue(kind, out var p) ? p : null;
 
-    public async Task<PaymentCreateResult?> CreateAsync(PaymentCreateRequest req, string baseUrl)
+    public async Task<PaymentCreateResult?> CreateAsync(int userId, PaymentCreateRequest req, string baseUrl)
     {
-        var user = await _db.Users.FindAsync(req.UserId);
+        var user = await _db.Users.FindAsync(userId);
         if (user is null) return null;
         if (!_providers.TryGetValue(req.Provider, out var provider)) return null;
 
@@ -36,7 +36,7 @@ public class PaymentService
         var order = new PaymentOrder
         {
             OrderId = provider.NewOrderId(),
-            UserId = req.UserId,
+            UserId = userId,
             Provider = req.Provider,
             Amount = amount,
             Plan = req.Plan,
