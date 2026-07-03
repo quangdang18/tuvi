@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tử Vi Mỗi Ngày ✨</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+      min-height: 100vh; color: #1a1a2e;
+      display: flex; align-items: flex-start; justify-content: center; padding: 24px;
+    }
+    .app { width: 100%; max-width: 480px; }
+    h1 { color: #fff; text-align: center; font-size: 1.6rem; margin-bottom: 4px; }
+    .sub { color: #e0d7ff; text-align: center; font-size: .85rem; margin-bottom: 20px; }
+    .card {
+      background: #fff; border-radius: 20px; padding: 22px;
+      box-shadow: 0 12px 40px rgba(0,0,0,.25); margin-bottom: 16px;
+    }
+    label { font-size: .8rem; color: #666; display: block; margin-bottom: 6px; }
+    input[type=date] {
+      width: 100%; padding: 12px; border: 2px solid #e6e6f0; border-radius: 12px;
+      font-size: 1rem; margin-bottom: 12px;
+    }
+    button {
+      width: 100%; padding: 13px; border: none; border-radius: 12px; cursor: pointer;
+      background: linear-gradient(135deg, #6a11cb, #2575fc); color: #fff;
+      font-size: 1rem; font-weight: 600; transition: transform .1s;
+    }
+    button:active { transform: scale(.98); }
+    .hidden { display: none; }
+    .sign-head { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+    .sign-sym { font-size: 2.4rem; }
+    .sign-name { font-size: 1.3rem; font-weight: 700; }
+    .sign-meta { font-size: .8rem; color: #888; }
+    .stars { color: #ffb300; font-size: 1.1rem; letter-spacing: 2px; margin: 8px 0; }
+    .headline { font-style: italic; color: #6a11cb; font-weight: 600; margin-bottom: 14px; }
+    .sec { padding: 12px 0; border-top: 1px solid #f0f0f5; }
+    .sec-title { font-size: .78rem; text-transform: uppercase; letter-spacing: .5px; color: #9a8; color: #a06cd5; font-weight: 700; margin-bottom: 4px; }
+    .sec-body { font-size: .92rem; line-height: 1.5; color: #333; }
+    .lucky { display: flex; gap: 10px; margin-top: 14px; }
+    .chip { flex: 1; background: #f5f2ff; border-radius: 12px; padding: 10px; text-align: center; }
+    .chip b { display: block; font-size: 1.2rem; color: #6a11cb; }
+    .chip span { font-size: .72rem; color: #888; }
+    .numer { background: #fff4e6; border-radius: 12px; padding: 12px; margin-top: 12px; font-size: .88rem; }
+    .numer b { color: #e8590c; }
+    .disclaimer { color: #d7cbff; text-align: center; font-size: .7rem; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>✨ Tử Vi Mỗi Ngày</h1>
+    <p class="sub">Nhập ngày sinh để xem cung hoàng đạo &amp; vận trình hôm nay</p>
+
+    <div class="card">
+      <label for="dob">Ngày sinh của bạn</label>
+      <input type="date" id="dob" value="2001-08-01" />
+      <button onclick="load()">Xem vận trình hôm nay 🔮</button>
+    </div>
+
+    <div id="result" class="card hidden"></div>
+    <p class="disclaimer">Nội dung mang tính giải trí &amp; tham khảo.</p>
+  </div>
+
+  <script>
+    const api = ""; // cùng origin
+
+    async function load() {
+      const dob = document.getElementById("dob").value;
+      if (!dob) { alert("Chọn ngày sinh nhé!"); return; }
+
+      const profile = await fetch(api + "/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ birthDate: dob })
+      }).then(r => r.json());
+
+      const horo = await fetch(api + "/api/horoscope/daily-by-birth?birthDate=" + dob)
+        .then(r => r.json());
+
+      render(profile, horo);
+    }
+
+    function render(p, h) {
+      const z = p.zodiac, n = p.numerology;
+      const stars = "★".repeat(h.score) + "☆".repeat(5 - h.score);
+      const box = document.getElementById("result");
+      box.classList.remove("hidden");
+      box.innerHTML = `
+        <div class="sign-head">
+          <div class="sign-sym">${z.symbol}</div>
+          <div>
+            <div class="sign-name">${z.nameVi}</div>
+            <div class="sign-meta">${z.dateRange} · Mệnh ${z.elementVi}</div>
+          </div>
+        </div>
+        <div class="stars">${stars}</div>
+        <div class="headline">${h.headline}</div>
+
+        <div class="sec"><div class="sec-title">Tổng quan</div><div class="sec-body">${h.overall}</div></div>
+        <div class="sec"><div class="sec-title">💗 Tình cảm</div><div class="sec-body">${h.love}</div></div>
+        <div class="sec"><div class="sec-title">📚 Học tập / Sự nghiệp</div><div class="sec-body">${h.career}</div></div>
+        <div class="sec"><div class="sec-title">💰 Tài chính</div><div class="sec-body">${h.money}</div></div>
+        <div class="sec"><div class="sec-title">🌤️ Tâm trạng</div><div class="sec-body">${h.mood}</div></div>
+        <div class="sec"><div class="sec-title">✅ Lời khuyên hôm nay</div><div class="sec-body">${h.advice}</div></div>
+
+        <div class="lucky">
+          <div class="chip"><b>${h.luckyNumber}</b><span>Số may mắn</span></div>
+          <div class="chip"><b>${h.luckyColor}</b><span>Màu may mắn</span></div>
+        </div>
+
+        <div class="numer">
+          Con số chủ đạo: <b>${n.number} — ${n.title}</b><br/>${n.description}
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
