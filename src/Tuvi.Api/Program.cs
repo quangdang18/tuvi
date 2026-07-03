@@ -94,6 +94,7 @@ builder.Services.AddSingleton<IClock, SystemClock>();
 // Engine tính toán — stateless nên singleton.
 builder.Services.AddSingleton<ZodiacService>();
 builder.Services.AddSingleton<NumerologyService>();
+builder.Services.AddSingleton<IReadingWriter, TemplateReadingWriter>();
 builder.Services.AddSingleton<HoroscopeService>();
 builder.Services.AddSingleton<PersonalityService>();
 builder.Services.AddSingleton<CompatibilityService>();

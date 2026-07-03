@@ -30,7 +30,7 @@ public class StreakTests
             db.Checkins.Add(new DailyCheckin { UserId = user.Id, Date = d, Mood = Mood.Normal, CreatedAt = DateTimeOffset.UtcNow });
         db.SaveChanges();
 
-        var horo = new HoroscopeService(new ZodiacService(), new MemoryCache(new MemoryCacheOptions()));
+        var horo = new HoroscopeService(new ZodiacService(), new TemplateReadingWriter(), new MemoryCache(new MemoryCacheOptions()));
         var svc = new UserService(db, new ZodiacService(), new NumerologyService(), horo, new FixedClock(today));
         return (svc, db, user.Id);
     }

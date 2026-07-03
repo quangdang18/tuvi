@@ -4,17 +4,20 @@ using Tuvi.Api.Models;
 namespace Tuvi.Api.Services;
 
 /// <summary>
-/// Sinh tử vi hằng ngày cho từng cung. Nội dung được chọn deterministic theo (cung + ngày)
-/// và cache lại — nên 10.000 user cùng cung/ngày chỉ tạo 1 lần, chi phí gần như bằng 0.
+/// Cung cấp tử vi hằng ngày cho từng cung. Nội dung do <see cref="IReadingWriter"/> tạo,
+/// còn lớp này lo phần cache theo (cung + ngày) — nên 10.000 user cùng cung/ngày chỉ tạo 1 lần.
+/// Đồng thời bọc thêm lớp cá nhân hóa (mood, streak, premium, focus).
 /// </summary>
 public class HoroscopeService
 {
     private readonly ZodiacService _zodiac;
+    private readonly IReadingWriter _writer;
     private readonly IMemoryCache _cache;
 
-    public HoroscopeService(ZodiacService zodiac, IMemoryCache cache)
+    public HoroscopeService(ZodiacService zodiac, IReadingWriter writer, IMemoryCache cache)
     {
         _zodiac = zodiac;
+        _writer = writer;
         _cache = cache;
     }
 
@@ -27,13 +30,13 @@ public class HoroscopeService
         return _cache.GetOrCreate(cacheKey, entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(26);
-            return Build(sign, date);
+            return _writer.Write(sign, date);
         });
     }
 
     /// <summary>
     /// Bọc tử vi gốc bằng lớp cá nhân hóa: lời chào theo tâm trạng, thông điệp streak,
-    /// và "lá số chuyên sâu" nếu user là premium (nếu không thì trả teaser để mời nâng cấp).
+    /// điểm nhấn theo mối quan tâm, và "lá số chuyên sâu" nếu user là premium.
     /// </summary>
     public PersonalizedHoroscope Personalize(
         DailyHoroscope reading, string displayName, Mood? mood, int streak, bool premium, FocusArea? focus)
@@ -73,30 +76,5 @@ public class HoroscopeService
             DeepInsight: deep,
             PremiumTeaser: teaser,
             FocusHighlight: focusHighlight);
-    }
-
-    private static DailyHoroscope Build(ZodiacInfo sign, DateOnly date)
-    {
-        string d = date.ToString("yyyyMMdd");
-        string k = sign.Key;
-
-        int score = 3 + StableHash.Pick(3, k, d, "score");        // 3..5 sao (thiên tích cực)
-        int lucky = StableHash.Compute($"{k}|{d}|lucky") % 100;    // 0..99
-
-        return new DailyHoroscope(
-            SignKey: sign.Key,
-            SignNameVi: sign.NameVi,
-            Symbol: sign.Symbol,
-            Date: date,
-            Score: score,
-            Headline: StableHash.Pick(HoroscopeContent.Headlines, k, d, "head"),
-            Overall: StableHash.Pick(HoroscopeContent.Overall, k, d, "overall"),
-            Love: StableHash.Pick(HoroscopeContent.Love, k, d, "love"),
-            Career: StableHash.Pick(HoroscopeContent.Career, k, d, "career"),
-            Money: StableHash.Pick(HoroscopeContent.Money, k, d, "money"),
-            Mood: StableHash.Pick(HoroscopeContent.Mood, k, d, "mood"),
-            Advice: StableHash.Pick(HoroscopeContent.Advice, k, d, "advice"),
-            LuckyNumber: lucky,
-            LuckyColor: StableHash.Pick(HoroscopeContent.LuckyColors, k, d, "color"));
     }
 }

@@ -37,8 +37,16 @@ Mặc định mở tại `http://localhost:5xxx` (xem cổng in ra ở console):
 | POST | `/api/users/{id}/checkin` | Check-in tâm trạng → tử vi cá nhân hóa + streak. Body: `{ "mood":"Sad", "note":null }` |
 | GET | `/api/users/{id}/horoscope?date=` | Tử vi cá nhân hóa (dùng mood đã check-in) |
 | GET | `/api/users/{id}/streak` | Chuỗi check-in hiện tại & dài nhất |
+| GET | `/api/users/{id}/referral` | Mã & link mời bạn + số người đã mời được |
+| PUT | `/api/users/{id}/focus` | Đổi mối quan tâm chính. Body: `{ "focus":"Love" }` |
 
-`mood`: `Happy, Normal, Sad, Stressed, Excited, Tired`.
+`mood`: `Happy, Normal, Sad, Stressed, Excited, Tired`. `focus`: `Love, Career, Money, Growth`.
+
+**Auth**: mọi endpoint `/api/users/**` (trừ đăng ký) và `/api/payment/create` yêu cầu header
+`Authorization: Bearer <token>` (token nhận từ `POST /api/users`); truy cập id người khác → 403.
+
+**Referral (viral)**: khi đăng ký kèm `"referralCode"` hợp lệ, cả người mời lẫn người được mời
+đều +3 ngày Premium. Link mời có dạng `/app.html?ref=CODE`.
 
 ### Thanh toán (nâng cấp Premium)
 | Method | Route | Mô tả |
@@ -58,7 +66,8 @@ Mặc định mở tại `http://localhost:5xxx` (xem cổng in ra ở console):
 
 Key của 12 cung: `aries, taurus, gemini, cancer, leo, virgo, libra, scorpio, sagittarius, capricorn, aquarius, pisces`.
 
-Trang demo đầy đủ (đăng ký → check-in → tử vi cá nhân hóa → mua Premium): mở **`/app.html`**.
+Trang demo đầy đủ (đăng ký → check-in → tử vi cá nhân hóa → mời bạn → mua Premium): mở **`/app.html`**.
+Trang chia sẻ công khai (không cần đăng nhập): **`/share.html?a=leo&b=aries`** (độ hợp) hoặc **`/share.html?sign=leo`** (tử vi ngày).
 
 ## Kiến trúc
 
@@ -97,6 +106,7 @@ nói riêng cho mình*. Toàn bộ deterministic nên nội dung cố định tr
 - **Live thanh toán**: đăng ký merchant MoMo/ZaloPay, đổi `Payment.Mode = Live`, điền key. Chữ ký HMAC đã sẵn.
 - **Push thật**: thay `LogPushSender` bằng bản gọi FCM/APNs (giữ nguyên interface `IPushSender`).
 - **Migration**: thay `EnsureCreated` bằng EF Core migrations khi schema bắt đầu thay đổi.
-- **Tầng lai + cache AI**: dùng AI viết lời văn nhưng cache theo `(cung + ngày)` để giữ chi phí ~0.
+- **AI viết nội dung**: đã tách sẵn interface `IReadingWriter` (bản `TemplateReadingWriter` hiện tại).
+  Chỉ cần thêm `AiReadingWriter` gọi LLM và đăng ký thay thế — lớp cache `(cung + ngày)` giữ nguyên nên chi phí vẫn ~0.
 
 > Nội dung mang tính giải trí & tham khảo.

@@ -81,7 +81,7 @@ public class StableHashTests
 public class HoroscopeServiceTests
 {
     private static HoroscopeService NewSut() =>
-        new(new ZodiacService(), new MemoryCache(new MemoryCacheOptions()));
+        new(new ZodiacService(), new TemplateReadingWriter(), new MemoryCache(new MemoryCacheOptions()));
 
     [Fact]
     public void GetDaily_is_deterministic_for_same_sign_and_date()
