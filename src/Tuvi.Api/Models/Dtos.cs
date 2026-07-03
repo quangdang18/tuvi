@@ -29,6 +29,38 @@ public record DailyHoroscope(
     int LuckyNumber,
     string LuckyColor);
 
+// ----- Tử vi tuần -----
+
+public record WeeklyHoroscope(
+    string SignKey,
+    string SignNameVi,
+    string Symbol,
+    DateOnly WeekStart,
+    DateOnly WeekEnd,
+    int Score,
+    string Headline,
+    string Overall,
+    string Love,
+    string Career,
+    string Money,
+    string LuckyDay);
+
+// ----- Tử vi tháng -----
+
+public record MonthlyHoroscope(
+    string SignKey,
+    string SignNameVi,
+    string Symbol,
+    int Year,
+    int Month,
+    int Score,
+    string Theme,
+    string Overall,
+    string Love,
+    string Career,
+    string Money,
+    string LuckyDates);
+
 // ----- Trắc nghiệm 16 nhóm tính cách -----
 
 public record PersonalityOption(string Text, char Pole);

@@ -107,4 +107,42 @@ public class HoroscopeServiceTests
     [Fact]
     public void GetDaily_returns_null_for_unknown_sign()
         => Assert.Null(NewSut().GetDaily("khong-ton-tai", new DateOnly(2026, 7, 3)));
+
+    [Fact]
+    public void GetWeekly_starts_on_monday_and_spans_7_days()
+    {
+        var w = NewSut().GetWeekly("leo", new DateOnly(2026, 7, 8))!;
+        Assert.Equal(DayOfWeek.Monday, w.WeekStart.ToDateTime(TimeOnly.MinValue).DayOfWeek);
+        Assert.Equal(w.WeekStart.AddDays(6), w.WeekEnd);
+        Assert.InRange(w.Score, 1, 5);
+    }
+
+    [Fact]
+    public void GetWeekly_is_deterministic_within_same_week()
+    {
+        var sut = NewSut();
+        var a = sut.GetWeekly("leo", new DateOnly(2026, 7, 8))!;
+        var b = sut.GetWeekly("leo", a.WeekEnd)!; // ngày khác trong cùng tuần
+        Assert.Equal(a.WeekStart, b.WeekStart);
+        Assert.Equal(a.Overall, b.Overall);
+    }
+
+    [Fact]
+    public void GetMonthly_is_deterministic_and_has_lucky_dates()
+    {
+        var sut = NewSut();
+        var a = sut.GetMonthly("scorpio", 2026, 7)!;
+        var b = sut.GetMonthly("scorpio", 2026, 7)!;
+        Assert.Equal(a.Overall, b.Overall);
+        Assert.False(string.IsNullOrWhiteSpace(a.LuckyDates));
+        Assert.InRange(a.Score, 1, 5);
+    }
+
+    [Fact]
+    public void GetMonthly_returns_null_for_invalid_month()
+        => Assert.Null(NewSut().GetMonthly("leo", 2026, 13));
+
+    [Fact]
+    public void GetWeekly_returns_null_for_unknown_sign()
+        => Assert.Null(NewSut().GetWeekly("khong-ton-tai", new DateOnly(2026, 7, 8)));
 }

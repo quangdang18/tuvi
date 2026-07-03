@@ -24,6 +24,8 @@ Mặc định mở tại `http://localhost:5xxx` (xem cổng in ra ở console):
 | GET | `/api/horoscope/signs` | Danh sách 12 cung hoàng đạo |
 | GET | `/api/horoscope/daily/{sign}?date=` | Tử vi hằng ngày theo cung (vd `leo`). Bỏ trống `date` = hôm nay |
 | GET | `/api/horoscope/daily-by-birth?birthDate=&date=` | Tử vi hằng ngày theo ngày sinh (tự suy ra cung) |
+| GET | `/api/horoscope/weekly/{sign}?date=` | Tử vi tuần (bỏ trống `date` = tuần này) |
+| GET | `/api/horoscope/monthly/{sign}?year=&month=` | Tử vi tháng (bỏ trống = tháng này) |
 | GET | `/api/personality/questions` | Bộ câu hỏi trắc nghiệm 16 nhóm tính cách |
 | POST | `/api/personality/result` | Chấm kết quả. Body: `{ "answers": [ { "questionId": 1, "pole": "E" }, ... ] }` |
 | GET | `/api/compatibility?a=leo&b=aries` | Độ hợp giữa hai cung |

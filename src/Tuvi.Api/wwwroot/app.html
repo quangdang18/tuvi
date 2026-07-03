@@ -22,6 +22,9 @@
     .greet { font-style: italic; color: #6a11cb; margin-bottom: 8px; }
     .streak { background: #fff4e6; border-radius: 10px; padding: 10px; font-size: .88rem; color: #e8590c; margin-bottom: 12px; }
     .focus { background: #e7f5ff; border-radius: 10px; padding: 10px; font-size: .9rem; color: #1971c2; margin-bottom: 12px; }
+    .tabs2 { display: flex; gap: 6px; margin-bottom: 12px; }
+    .tabs2 button { flex: 1; background: #f2f0fb; color: #6a11cb; padding: 8px; font-size: .85rem; }
+    .tabs2 button.active { background: linear-gradient(135deg,#6a11cb,#2575fc); color: #fff; }
     .sec { padding: 10px 0; border-top: 1px solid #f0f0f5; }
     .sec b { color: #a06cd5; font-size: .78rem; text-transform: uppercase; }
     .sec p { font-size: .9rem; line-height: 1.5; margin-top: 3px; }
@@ -163,16 +166,43 @@
       render(h);
     }
 
+    let lastH = null;
     function render(h) {
-      const r = h.reading;
+      lastH = h;
+      document.getElementById("result").classList.remove("hidden");
+      paint("day");
+    }
+
+    function tabBar(active) {
+      const b = (k, label) => `<button class="${active === k ? 'active' : ''}" onclick="paint('${k}')">${label}</button>`;
+      return `<div class="tabs2">${b('day', 'Hôm nay')}${b('week', 'Tuần')}${b('month', 'Tháng')}</div>`;
+    }
+
+    async function paint(kind) {
       const box = document.getElementById("result");
-      box.classList.remove("hidden");
+      if (kind === "day") { box.innerHTML = tabBar('day') + dailyHtml(lastH); return; }
+      box.innerHTML = tabBar(kind) + "<p class='muted'>Đang tải…</p>";
+      if (kind === "week") {
+        const w = await fetch(`/api/horoscope/weekly/${userSign}`).then(r => r.json());
+        box.innerHTML = tabBar('week') + periodHtml(w, `Tuần ${fmtD(w.weekStart)} – ${fmtD(w.weekEnd)}`, w.headline,
+          [["Tổng quan tuần", w.overall], ["💗 Tình cảm", w.love], ["📚 Sự nghiệp / Học tập", w.career], ["💰 Tài chính", w.money]],
+          "Ngày tốt trong tuần", w.luckyDay);
+      } else {
+        const m = await fetch(`/api/horoscope/monthly/${userSign}`).then(r => r.json());
+        box.innerHTML = tabBar('month') + periodHtml(m, `Tháng ${m.month}/${m.year}`, "✦ " + m.theme,
+          [["Tổng quan tháng", m.overall], ["💗 Tình cảm", m.love], ["📚 Sự nghiệp / Học tập", m.career], ["💰 Tài chính", m.money]],
+          "Ngày đẹp trong tháng", m.luckyDates);
+      }
+    }
+
+    function dailyHtml(h) {
+      const r = h.reading;
       const stars = "★".repeat(r.score) + "☆".repeat(5 - r.score);
       const focusBlock = h.focusHighlight ? `<div class="focus">${h.focusHighlight}</div>` : "";
       const premiumBlock = h.isPremium
         ? `<div class="deep"><span class="badge">PREMIUM</span><p style="margin-top:6px">${h.deepInsight}</p></div>`
         : `<div class="locked">${h.premiumTeaser}</div>`;
-      box.innerHTML = `
+      return `
         <div class="greet">${h.greeting}</div>
         <div class="streak">${h.streakMessage}</div>
         ${focusBlock}
@@ -184,9 +214,21 @@
         <div class="sec"><b>💰 Tài chính</b><p>${r.money}</p></div>
         <div class="sec"><b>✅ Lời khuyên</b><p>${r.advice}</p></div>
         <p class="muted" style="margin-top:8px">Số may mắn <b>${r.luckyNumber}</b> · Màu <b>${r.luckyColor}</b></p>
-        ${premiumBlock}
-      `;
+        ${premiumBlock}`;
     }
+
+    function periodHtml(x, period, headline, secs, luckyLabel, luckyVal) {
+      const stars = "★".repeat(x.score) + "☆".repeat(5 - x.score);
+      const secHtml = secs.map(([t, b]) => `<div class="sec"><b>${t}</b><p>${b}</p></div>`).join("");
+      return `
+        <div style="font-size:1.1rem;font-weight:700">${x.symbol} ${x.signNameVi} · <span style="color:#ffb300">${stars}</span></div>
+        <div class="muted" style="margin:2px 0 6px">${period}</div>
+        <div style="font-style:italic;color:#6a11cb;margin:4px 0">${headline}</div>
+        ${secHtml}
+        <div class="focus" style="margin-top:10px">${luckyLabel}: <b>${luckyVal}</b></div>`;
+    }
+
+    const fmtD = (d) => { const p = d.split("-"); return p[2] + "/" + p[1]; };
 
     async function buy(provider) {
       const order = await fetch("/api/payment/create", {

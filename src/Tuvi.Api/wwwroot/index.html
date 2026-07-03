@@ -15,22 +15,16 @@
     .app { width: 100%; max-width: 480px; }
     h1 { color: #fff; text-align: center; font-size: 1.6rem; margin-bottom: 4px; }
     .sub { color: #e0d7ff; text-align: center; font-size: .85rem; margin-bottom: 20px; }
-    .card {
-      background: #fff; border-radius: 20px; padding: 22px;
-      box-shadow: 0 12px 40px rgba(0,0,0,.25); margin-bottom: 16px;
-    }
+    .card { background: #fff; border-radius: 20px; padding: 22px; box-shadow: 0 12px 40px rgba(0,0,0,.25); margin-bottom: 16px; }
     label { font-size: .8rem; color: #666; display: block; margin-bottom: 6px; }
-    input[type=date] {
-      width: 100%; padding: 12px; border: 2px solid #e6e6f0; border-radius: 12px;
-      font-size: 1rem; margin-bottom: 12px;
-    }
-    button {
-      width: 100%; padding: 13px; border: none; border-radius: 12px; cursor: pointer;
-      background: linear-gradient(135deg, #6a11cb, #2575fc); color: #fff;
-      font-size: 1rem; font-weight: 600; transition: transform .1s;
-    }
+    input[type=date] { width: 100%; padding: 12px; border: 2px solid #e6e6f0; border-radius: 12px; font-size: 1rem; margin-bottom: 12px; }
+    button { padding: 12px; border: none; border-radius: 12px; cursor: pointer; background: linear-gradient(135deg, #6a11cb, #2575fc); color: #fff; font-size: 1rem; font-weight: 600; transition: transform .1s; }
     button:active { transform: scale(.98); }
+    .full { width: 100%; }
     .hidden { display: none; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+    .tabs button { flex: 1; background: #f2f0fb; color: #6a11cb; padding: 10px; font-size: .9rem; }
+    .tabs button.active { background: linear-gradient(135deg,#6a11cb,#2575fc); color: #fff; }
     .sign-head { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
     .sign-sym { font-size: 2.4rem; }
     .sign-name { font-size: 1.3rem; font-weight: 700; }
@@ -38,11 +32,11 @@
     .stars { color: #ffb300; font-size: 1.1rem; letter-spacing: 2px; margin: 8px 0; }
     .headline { font-style: italic; color: #6a11cb; font-weight: 600; margin-bottom: 14px; }
     .sec { padding: 12px 0; border-top: 1px solid #f0f0f5; }
-    .sec-title { font-size: .78rem; text-transform: uppercase; letter-spacing: .5px; color: #9a8; color: #a06cd5; font-weight: 700; margin-bottom: 4px; }
+    .sec-title { font-size: .78rem; text-transform: uppercase; letter-spacing: .5px; color: #a06cd5; font-weight: 700; margin-bottom: 4px; }
     .sec-body { font-size: .92rem; line-height: 1.5; color: #333; }
-    .lucky { display: flex; gap: 10px; margin-top: 14px; }
-    .chip { flex: 1; background: #f5f2ff; border-radius: 12px; padding: 10px; text-align: center; }
-    .chip b { display: block; font-size: 1.2rem; color: #6a11cb; }
+    .lucky { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+    .chip { flex: 1; min-width: 90px; background: #f5f2ff; border-radius: 12px; padding: 10px; text-align: center; }
+    .chip b { display: block; font-size: 1.1rem; color: #6a11cb; }
     .chip span { font-size: .72rem; color: #888; }
     .numer { background: #fff4e6; border-radius: 12px; padding: 12px; margin-top: 12px; font-size: .88rem; }
     .numer b { color: #e8590c; }
@@ -52,70 +46,101 @@
 <body>
   <div class="app">
     <h1>✨ Tử Vi Mỗi Ngày</h1>
-    <p class="sub">Nhập ngày sinh để xem cung hoàng đạo &amp; vận trình hôm nay</p>
+    <p class="sub">Nhập ngày sinh để xem vận trình Ngày · Tuần · Tháng</p>
 
     <div class="card">
       <label for="dob">Ngày sinh của bạn</label>
       <input type="date" id="dob" value="2001-08-01" />
-      <button onclick="load()">Xem vận trình hôm nay 🔮</button>
+      <button class="full" onclick="load()">Xem vận trình 🔮</button>
     </div>
 
-    <div id="result" class="card hidden"></div>
+    <div id="panel" class="card hidden">
+      <div class="tabs">
+        <button id="tab-day" class="active" onclick="show('day')">Hôm nay</button>
+        <button id="tab-week" onclick="show('week')">Tuần này</button>
+        <button id="tab-month" onclick="show('month')">Tháng này</button>
+      </div>
+      <div id="content"></div>
+    </div>
+
     <p class="disclaimer">Nội dung mang tính giải trí &amp; tham khảo.</p>
   </div>
 
   <script>
-    const api = ""; // cùng origin
+    let sign = null, numer = null;
 
     async function load() {
       const dob = document.getElementById("dob").value;
       if (!dob) { alert("Chọn ngày sinh nhé!"); return; }
-
-      const profile = await fetch(api + "/api/profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const profile = await fetch("/api/profile", {
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ birthDate: dob })
       }).then(r => r.json());
-
-      const horo = await fetch(api + "/api/horoscope/daily-by-birth?birthDate=" + dob)
-        .then(r => r.json());
-
-      render(profile, horo);
+      sign = profile.zodiac;
+      numer = profile.numerology;
+      document.getElementById("panel").classList.remove("hidden");
+      show("day");
     }
 
-    function render(p, h) {
-      const z = p.zodiac, n = p.numerology;
-      const stars = "★".repeat(h.score) + "☆".repeat(5 - h.score);
-      const box = document.getElementById("result");
-      box.classList.remove("hidden");
-      box.innerHTML = `
+    function setTab(id) {
+      for (const t of ["day", "week", "month"])
+        document.getElementById("tab-" + t).classList.toggle("active", t === id);
+    }
+
+    async function show(kind) {
+      setTab(kind);
+      const c = document.getElementById("content");
+      c.innerHTML = "<p style='color:#999'>Đang tải…</p>";
+      if (kind === "day") {
+        const h = await fetch(`/api/horoscope/daily/${sign.key}`).then(r => r.json());
+        c.innerHTML = head(sign, h.score, "Hôm nay") + `
+          <div class="headline">${h.headline}</div>
+          ${sec("Tổng quan", h.overall)}
+          ${sec("💗 Tình cảm", h.love)}
+          ${sec("📚 Học tập / Sự nghiệp", h.career)}
+          ${sec("💰 Tài chính", h.money)}
+          ${sec("🌤️ Tâm trạng", h.mood)}
+          ${sec("✅ Lời khuyên", h.advice)}
+          <div class="lucky">
+            <div class="chip"><b>${h.luckyNumber}</b><span>Số may mắn</span></div>
+            <div class="chip"><b>${h.luckyColor}</b><span>Màu may mắn</span></div>
+          </div>` + numerBlock();
+      } else if (kind === "week") {
+        const w = await fetch(`/api/horoscope/weekly/${sign.key}`).then(r => r.json());
+        c.innerHTML = head(sign, w.score, `Tuần ${fmt(w.weekStart)} – ${fmt(w.weekEnd)}`) + `
+          <div class="headline">${w.headline}</div>
+          ${sec("Tổng quan tuần", w.overall)}
+          ${sec("💗 Tình cảm", w.love)}
+          ${sec("📚 Sự nghiệp / Học tập", w.career)}
+          ${sec("💰 Tài chính", w.money)}
+          <div class="lucky"><div class="chip"><b>${w.luckyDay}</b><span>Ngày tốt trong tuần</span></div></div>`;
+      } else {
+        const m = await fetch(`/api/horoscope/monthly/${sign.key}`).then(r => r.json());
+        c.innerHTML = head(sign, m.score, `Tháng ${m.month}/${m.year}`) + `
+          <div class="headline">✦ ${m.theme}</div>
+          ${sec("Tổng quan tháng", m.overall)}
+          ${sec("💗 Tình cảm", m.love)}
+          ${sec("📚 Sự nghiệp / Học tập", m.career)}
+          ${sec("💰 Tài chính", m.money)}
+          <div class="lucky"><div class="chip"><b>${m.luckyDates}</b><span>Ngày đẹp trong tháng</span></div></div>`;
+      }
+    }
+
+    function head(z, score, period) {
+      const stars = "★".repeat(score) + "☆".repeat(5 - score);
+      return `
         <div class="sign-head">
           <div class="sign-sym">${z.symbol}</div>
           <div>
             <div class="sign-name">${z.nameVi}</div>
-            <div class="sign-meta">${z.dateRange} · Mệnh ${z.elementVi}</div>
+            <div class="sign-meta">${period} · Mệnh ${z.elementVi}</div>
           </div>
         </div>
-        <div class="stars">${stars}</div>
-        <div class="headline">${h.headline}</div>
-
-        <div class="sec"><div class="sec-title">Tổng quan</div><div class="sec-body">${h.overall}</div></div>
-        <div class="sec"><div class="sec-title">💗 Tình cảm</div><div class="sec-body">${h.love}</div></div>
-        <div class="sec"><div class="sec-title">📚 Học tập / Sự nghiệp</div><div class="sec-body">${h.career}</div></div>
-        <div class="sec"><div class="sec-title">💰 Tài chính</div><div class="sec-body">${h.money}</div></div>
-        <div class="sec"><div class="sec-title">🌤️ Tâm trạng</div><div class="sec-body">${h.mood}</div></div>
-        <div class="sec"><div class="sec-title">✅ Lời khuyên hôm nay</div><div class="sec-body">${h.advice}</div></div>
-
-        <div class="lucky">
-          <div class="chip"><b>${h.luckyNumber}</b><span>Số may mắn</span></div>
-          <div class="chip"><b>${h.luckyColor}</b><span>Màu may mắn</span></div>
-        </div>
-
-        <div class="numer">
-          Con số chủ đạo: <b>${n.number} — ${n.title}</b><br/>${n.description}
-        </div>
-      `;
+        <div class="stars">${stars}</div>`;
     }
+    const sec = (t, b) => `<div class="sec"><div class="sec-title">${t}</div><div class="sec-body">${b}</div></div>`;
+    const numerBlock = () => `<div class="numer">Con số chủ đạo: <b>${numer.number} — ${numer.title}</b><br/>${numer.description}</div>`;
+    const fmt = (d) => { const p = d.split("-"); return p[2] + "/" + p[1]; };
   </script>
 </body>
 </html>

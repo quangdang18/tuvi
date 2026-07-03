@@ -34,6 +34,41 @@ public class HoroscopeService
         });
     }
 
+    public WeeklyHoroscope? GetWeekly(string signKey, DateOnly anyDateInWeek)
+    {
+        var sign = _zodiac.Get(signKey);
+        if (sign is null) return null;
+
+        var start = WeekStart(anyDateInWeek);
+        var end = start.AddDays(6);
+        string cacheKey = $"horo:w:{sign.Key}:{start:yyyyMMdd}";
+        return _cache.GetOrCreate(cacheKey, entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(8);
+            return _writer.WriteWeekly(sign, start, end);
+        });
+    }
+
+    public MonthlyHoroscope? GetMonthly(string signKey, int year, int month)
+    {
+        if (month is < 1 or > 12) return null;
+        var sign = _zodiac.Get(signKey);
+        if (sign is null) return null;
+
+        string cacheKey = $"horo:m:{sign.Key}:{year}{month:D2}";
+        return _cache.GetOrCreate(cacheKey, entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(32);
+            return _writer.WriteMonthly(sign, year, month);
+        });
+    }
+
+    private static DateOnly WeekStart(DateOnly d)
+    {
+        int diff = ((int)d.DayOfWeek + 6) % 7; // Thứ Hai = 0
+        return d.AddDays(-diff);
+    }
+
     /// <summary>
     /// Bọc tử vi gốc bằng lớp cá nhân hóa: lời chào theo tâm trạng, thông điệp streak,
     /// điểm nhấn theo mối quan tâm, và "lá số chuyên sâu" nếu user là premium.
